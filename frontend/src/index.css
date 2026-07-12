@@ -1,0 +1,50 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
+:root {
+  --navy-950: #0B1526;
+  --navy-900: #12203A;
+  --navy-border: #1B2C4D;
+  --gold: #C9A46A;
+  --text-light: #E8EAF0;
+  --text-muted: #8A93A6;
+  --bg-app: #F4F5F8;
+  --text-dark: #1D2433;
+}
+
+* {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+}
+
+body {
+  background-color: var(--bg-app);
+  color: var(--text-dark);
+}
+
+.tabular-nums {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Sidebar */
+.sidebar-link {
+  display: block;
+  padding: 9px 14px;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text-muted);
+  text-decoration: none;
+  border-radius: 4px;
+  border-left: 2px solid transparent;
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+.sidebar-link:hover {
+  background-color: var(--navy-900);
+  color: var(--text-light);
+}
+
+.sidebar-link-active {
+  background-color: var(--navy-900);
+  color: var(--text-light) !important;
+  border-left: 2px solid var(--gold);
+  font-weight: 600;
+}
