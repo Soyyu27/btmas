@@ -1,106 +1,122 @@
 const fs = require('fs');
-const xlsx = require('xlsx');
-const { Transaction } = require('../models');
-const { transformRow } = require('../utils/etl');
+const path = require('path');
+const { UploadLog } = require('../models');
+const { streamCsvToTemp, streamExcelToTemp, COLUMN_ORDER } = require('../utils/streamEtl');
+const mysqlPool = require('../config/mysqlPool');
+
+// Deteksi delimiter dari baris pertama file (tab atau koma)
+function detectDelimiter(filePath) {
+  const firstLine = fs.readFileSync(filePath, 'utf8').split('\n')[0];
+  return firstLine.includes('\t') ? '\t' : ',';
+}
+
+// Jalankan LOAD DATA INFILE ke MySQL dari file CSV yang sudah bersih
+async function loadDataInfile(tempCsvPath) {
+  const columnList = COLUMN_ORDER.join(', ');
+  // IGNORE = skip baris yang bentrok unique key (row_hash), tidak error
+  const sql = `
+    LOAD DATA LOCAL INFILE ${mysqlPool.escape(tempCsvPath)}
+    IGNORE INTO TABLE transactions
+    FIELDS TERMINATED BY ',' OPTIONALLY ENCLOSED BY '"'
+    LINES TERMINATED BY '\n'
+    (${columnList})
+  `;
+  const conn = await mysqlPool.getConnection();
+  try {
+    const [result] = await conn.query({ sql, infileStreamFactory: () => fs.createReadStream(tempCsvPath) });
+    return result.affectedRows || 0;
+  } finally {
+    conn.release();
+  }
+}
+
+// Proses upload berjalan di background, tidak di-await oleh response HTTP
+async function processUploadInBackground(logId, filePath, ext, originalName) {
+  const tempCsvPath = path.join('uploads', `processed-${logId}.csv`);
+
+  try {
+    let stats;
+    if (ext === '.xlsx' || ext === '.xls') {
+      stats = await streamExcelToTemp(filePath, tempCsvPath);
+    } else {
+      const delimiter = detectDelimiter(filePath);
+      stats = await streamCsvToTemp(filePath, delimiter, tempCsvPath);
+    }
+
+    const insertedCount = await loadDataInfile(tempCsvPath);
+    const duplikatDiskip = stats.validRows - insertedCount;
+
+    await UploadLog.update({
+      total_baris_file: stats.totalRows,
+      berhasil_insert: insertedCount,
+      baris_tidak_valid: stats.invalidRows,
+      duplikat_diskip: duplikatDiskip >= 0 ? duplikatDiskip : 0,
+      status: stats.invalidRows > 0 ? 'partial' : 'success',
+    }, { where: { id: logId } });
+  } catch (error) {
+    console.error('BACKGROUND UPLOAD ERROR:', error.message);
+    await UploadLog.update({
+      status: 'failed',
+      error_message: error.message,
+    }, { where: { id: logId } });
+  } finally {
+    // Bersihkan file sementara
+    if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
+    if (fs.existsSync(tempCsvPath)) fs.unlinkSync(tempCsvPath);
+  }
+}
 
 exports.uploadFile = async (req, res) => {
-  const filePath = req.file?.path;
-
-  try {
-    if (!req.file) {
-      return res.status(400).json({ message: 'File tidak ditemukan' });
-    }
-
-    // 1. EXTRACT - baca file (xlsx bisa baca .xlsx/.xls/.csv sekaligus)
-    const workbook = xlsx.readFile(filePath);
-    let rawRows = [];
-
-    // Gabung semua sheet kalau lebih dari 1 (untuk file Excel)
-    workbook.SheetNames.forEach((sheetName) => {
-      const sheet = workbook.Sheets[sheetName];
-      const sheetData = xlsx.utils.sheet_to_json(sheet, { defval: null });
-      rawRows = rawRows.concat(sheetData);
-    });
-
-    if (rawRows.length === 0) {
-      return res.status(400).json({ message: 'File kosong atau tidak terbaca' });
-    }
-
-    // 2. TRANSFORM - proses tiap baris lewat ETL
-    const validRows = [];
-    const invalidRows = [];
-
-    rawRows.forEach((raw, index) => {
-      const result = transformRow(raw);
-      if (result.valid) {
-        validRows.push(result.data);
-      } else {
-        invalidRows.push({ rowNumber: index + 2, error: result.error }); // +2 = offset header + index 0
-      }
-    });
-
-    if (validRows.length === 0) {
-      return res.status(400).json({
-        message: 'Tidak ada baris valid untuk diproses',
-        invalidRows,
-      });
-    }
-
-    // 3. LOAD - bulk insert, skip duplikat via row_hash
-    const result = await Transaction.bulkCreate(validRows, {
-      ignoreDuplicates: true, // MySQL: pakai INSERT IGNORE, skip kalau row_hash sudah ada
-    });
-
-    // 4. Cleanup - hapus file sementara
-    fs.unlinkSync(filePath);
-
-    res.status(201).json({
-      message: 'Upload berhasil diproses',
-      summary: {
-        total_baris_file: rawRows.length,
-        berhasil_insert: result.length,
-        baris_tidak_valid: invalidRows.length,
-        kemungkinan_duplikat_diskip: rawRows.length - result.length - invalidRows.length,
-      },
-      invalidRows: invalidRows.length > 0 ? invalidRows : undefined,
-    });
-  } catch (error) {
-    // Cleanup file kalau error di tengah proses
-    if (filePath && fs.existsSync(filePath)) {
-      fs.unlinkSync(filePath);
-    }
-    res.status(500).json({ message: 'Gagal memproses upload', error: error.message });
+  if (!req.file) {
+    return res.status(400).json({ message: 'File tidak ditemukan' });
   }
-};  
-// Preview: baca file, transform, TAPI TIDAK insert ke DB
-exports.previewFile = async (req, res) => {
-  const filePath = req.file?.path;
+
+  const ext = path.extname(req.file.originalname).toLowerCase();
+
+  // Buat log dengan status 'processing' dulu, langsung balas ke frontend
+  const log = await UploadLog.create({
+    filename: req.file.originalname,
+    uploaded_by: req.user.id,
+    status: 'processing',
+  });
+
+  // Jalankan proses berat di background — TIDAK di-await
+  processUploadInBackground(log.id, req.file.path, ext, req.file.originalname);
+
+  // Langsung balas, tidak nunggu proses selesai
+  res.status(202).json({
+    message: 'File diterima, sedang diproses di background',
+    logId: log.id,
+    status: 'processing',
+  });
+};
+
+// Endpoint untuk cek status upload tertentu (dipakai frontend polling)
+exports.getUploadStatus = async (req, res) => {
+  const log = await UploadLog.findByPk(req.params.id);
+  if (!log) return res.status(404).json({ message: 'Log tidak ditemukan' });
+  res.json(log);
+};
+
+// Histori upload (tetap sama seperti sebelumnya)
+exports.getUploadHistory = async (req, res) => {
   try {
-    if (!req.file) return res.status(400).json({ message: 'File tidak ditemukan' });
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 20;
+    const offset = (page - 1) * limit;
 
-    const workbook = xlsx.readFile(filePath);
-    let rawRows = [];
-    workbook.SheetNames.forEach((sheetName) => {
-      const sheet = workbook.Sheets[sheetName];
-      rawRows = rawRows.concat(xlsx.utils.sheet_to_json(sheet, { defval: null }));
+    const { count, rows } = await UploadLog.findAndCountAll({
+      include: [{ model: require('../models').User, as: 'uploader', attributes: ['id', 'username', 'full_name'] }],
+      order: [['created_at', 'DESC']],
+      limit,
+      offset,
     });
-
-    const preview = rawRows.slice(0, 20).map((raw, index) => {
-      const result = transformRow(raw);
-      return result.valid
-        ? { rowNumber: index + 2, status: 'valid', data: result.data }
-        : { rowNumber: index + 2, status: 'invalid', error: result.error };
-    });
-
-    fs.unlinkSync(filePath);
 
     res.json({
-      total_baris: rawRows.length,
-      preview_ditampilkan: preview.length,
-      preview,
+      data: rows,
+      pagination: { total_data: count, current_page: page, total_page: Math.ceil(count / limit), limit },
     });
   } catch (error) {
-    if (filePath && fs.existsSync(filePath)) fs.unlinkSync(filePath);
-    res.status(500).json({ message: 'Gagal preview file', error: error.message });
+    res.status(500).json({ message: 'Gagal ambil histori upload', error: error.message });
   }
 };

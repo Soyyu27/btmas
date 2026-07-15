@@ -25,6 +25,7 @@ export const menuConfig = [
       { label: 'Response Code', path: '/analitik/response-code', icon: 'bi-code-square', roles: ['admin', 'auditor'] },
       { label: 'Issuer', path: '/analitik/issuer', icon: 'bi-bank', roles: ['admin', 'auditor'] },
       { label: 'Acquirer', path: '/analitik/acquirer', icon: 'bi-bank2', roles: ['admin', 'auditor'] },
+      { label: 'Grafik Transaksi', path: '/analitik/grafik', icon: '', roles: ['admin', 'cabang', 'auditor'] },
     ],
   },
   {

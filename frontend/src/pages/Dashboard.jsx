@@ -209,7 +209,7 @@ const Dashboard = () => {
       <div className="row g-3 mb-3">
         <div className="col-12">
           <ChartCard
-            title={selectedMonth ? `Trend Harian — ${namaBulan[selectedMonth.bulan]} ${selectedMonth.tahun}` : 'Trend Transaksi Bulanan'}
+            title={selectedMonth ? `Trend Harian ${namaBulan[selectedMonth.bulan]} ${selectedMonth.tahun}` : 'Trend Transaksi Bulanan'}
             subtitle={selectedMonth ? 'Klik "Kembali" untuk lihat trend bulanan' : 'Klik salah satu titik untuk lihat rincian harian'}
             action={selectedMonth && (
               <button className="btn btn-sm btn-outline-secondary" onClick={backToMonthly}>Kembali</button>

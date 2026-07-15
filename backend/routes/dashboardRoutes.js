@@ -12,7 +12,11 @@ const {
   getFilterOptions,
   getTransactions,        // baru
   getTransactionDetail, 
-  getTrendBulanan,  // baru
+  getTrendBulanan,
+  exportTransactions,
+  exportTransactionsCsv, 
+  exportSummaryPdf
+    // baru
 } = require('../controllers/dashboardController');
 
 router.use(verifyToken); // semua route dashboard wajib login
@@ -29,5 +33,8 @@ router.get('/filters', getFilterOptions);
 router.get('/transactions', getTransactions);
 router.get('/transactions/:id', getTransactionDetail);
 router.get('/trend-bulanan', getTrendBulanan);
+router.get('/transactions/export', exportTransactions);
+router.get('/transactions/export-csv', exportTransactionsCsv);
+router.get('/report/summary-pdf', exportSummaryPdf);
 
 module.exports = router;

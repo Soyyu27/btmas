@@ -6,6 +6,9 @@ const { sequelize, testConnection } = require('./config/database');
 const authRoutes = require('./routes/authRoutes');
 const uploadRoutes = require('./routes/uploadRoutes');
 const dashboardRoutes = require('./routes/dashboardRoutes');
+const analyticsRoutes = require('./routes/analyticsRoutes');
+const masterDataRoutes = require('./routes/masterDataRoutes');
+const userRoutes = require('./routes/userRoutes');
 
 const app = express();
 
@@ -19,6 +22,9 @@ app.get('/api/health', (req, res) => {
 app.use('/api/auth', authRoutes);
 app.use('/api/upload', uploadRoutes);
 app.use('/api/dashboard', dashboardRoutes);
+app.use('/api/dashboard', analyticsRoutes);
+app.use('/api/master', masterDataRoutes);
+app.use('/api/users', userRoutes);
 
 const PORT = process.env.PORT || 5000;
 
@@ -30,3 +36,12 @@ app.listen(PORT, async () => {
   await sequelize.sync({ alter: false });
   console.log('✅ Models synced.');
 });
+
+const server = app.listen(PORT, async () => {
+  console.log(`🚀 Server running on http://localhost:${PORT}`);
+  await testConnection();
+  await sequelize.sync({ alter: false });
+  console.log('✅ Models synced.');
+});
+
+server.timeout = 10 * 60 * 1000; // 10 menit
