@@ -182,7 +182,10 @@ const UserManagement = () => {
           style={{ backgroundColor: 'rgba(11,21,38,0.5)', zIndex: 1050 }}
           onClick={() => setModalOpen(false)}
         >
-          <div style={{ backgroundColor: '#fff', borderRadius: '6px', width: '420px' }} onClick={(e) => e.stopPropagation()}>
+        <div
+          style={{ backgroundColor: '#fff', borderRadius: '6px', width: '100%', maxWidth: '440px', margin: '0 16px' }}
+          onClick={(e) => e.stopPropagation()}
+        >
             <div className="d-flex justify-content-between align-items-center px-4 py-3" style={{ borderBottom: '1px solid #E2E5EB' }}>
               <span style={{ fontSize: '15px', fontWeight: 700 }}>{editItem ? 'Edit' : 'Tambah'} User</span>
               <button type="button" className="btn-close" onClick={() => setModalOpen(false)}></button>

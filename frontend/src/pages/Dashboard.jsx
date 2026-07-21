@@ -198,7 +198,7 @@ const Dashboard = () => {
       <FilterPanel filters={filters} onApply={setFilters} />
 
       {/* KPI Cards */}
-      <div className="row row-cols-2 row-cols-md-4 g-3 mb-4">
+      <div className="row row-cols-2 row-cols-sm-3 row-cols-md-4 row-cols-xl-7 g-2 g-md-3 mb-4">
         <KpiCard label="Total Transaksi" value={formatNumber(kpi?.total_transaksi)} />
         <KpiCard label="Total Nominal" value={formatRupiah(kpi?.total_nominal)} accent={NAVY} />
         <KpiCard label="Total Fee" value={formatRupiah(kpi?.total_fee)} accent={GOLD} />

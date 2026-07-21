@@ -17,7 +17,7 @@ const TransactionDetailModal = ({ data, onClose }) => {
       onClick={onClose}
     >
       <div
-        style={{ backgroundColor: '#fff', borderRadius: '6px', width: '460px', maxHeight: '85vh', overflowY: 'auto' }}
+        style={{ backgroundColor: '#fff', borderRadius: '6px', width: '100%', maxWidth: '460px', margin: '0 16px', maxHeight: '85vh', overflowY: 'auto' }}
         onClick={(e) => e.stopPropagation()}
       >
         <div className="d-flex justify-content-between align-items-center px-4 py-3" style={{ borderBottom: '1px solid #E2E5EB' }}>
