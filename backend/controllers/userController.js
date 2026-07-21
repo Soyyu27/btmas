@@ -60,6 +60,11 @@ exports.updateUser = async (req, res) => {
     if (!user) return res.status(404).json({ message: 'User tidak ditemukan' });
 
     const { full_name, role, kode_cabang, is_active, password } = req.body;
+
+    if (role === 'cabang' && !kode_cabang) {
+      return res.status(400).json({ message: 'Kode cabang wajib diisi untuk role cabang' });
+    }
+
     const updateData = { full_name, role, kode_cabang: role === 'cabang' ? kode_cabang : null, is_active };
 
     // Password cuma diupdate kalau diisi (opsional saat edit)

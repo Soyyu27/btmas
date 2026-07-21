@@ -3,10 +3,12 @@ import api from '../services/api';
 import FilterPanel from '../components/FilterPanel';
 import EmptyState from '../components/EmptyState';
 import TransactionDetailModal from '../components/TransactionDetailModal';
-import { formatRupiah, formatNumber } from '../utils/formatters';
+import { formatRupiah, formatNumber, formatChannel } from '../utils/formatters';
+import { useAuth } from '../context/AuthContext';
 
 const DataTransaksi = () => {
-  const [filters, setFilters] = useState({});
+  const { user } = useAuth();
+  const [filters, setFilters] = useState(() => (user?.role === 'cabang' && user?.kode_cabang ? { kode_cabang: user.kode_cabang } : {}));
   const [search, setSearch] = useState('');
   const [sortBy, setSortBy] = useState('tgl_full');
   const [sortOrder, setSortOrder] = useState('desc');
@@ -117,7 +119,7 @@ const DataTransaksi = () => {
                 data.map((tx) => (
                   <tr key={tx.id}>
                     <td className="ps-3">{tx.tgl_full}</td>
-                    <td>{tx.vxchnl}</td>
+                    <td>{formatChannel(tx.vxchnl)}</td>
                     <td>{tx.produk}</td>
                     <td>{tx.kode_cabang || '-'}</td>
                     <td className="text-end tabular-nums">{formatRupiah(tx.vxamt)}</td>

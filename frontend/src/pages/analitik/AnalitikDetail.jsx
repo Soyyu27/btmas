@@ -6,7 +6,8 @@ import FilterPanel from '../../components/FilterPanel';
 import ChartCard from '../../components/ChartCard';
 import EmptyState from '../../components/EmptyState';
 import { analitikConfig } from '../../config/analitikConfig';
-import { formatRupiah, formatNumber } from '../../utils/formatters';
+import { formatRupiah, formatNumber, formatChannel } from '../../utils/formatters';
+import { useAuth } from '../../context/AuthContext';
 
 const NAVY = '#12203A';
 const GOLD = '#C9A46A';
@@ -14,8 +15,9 @@ const GOLD = '#C9A46A';
 const AnalitikDetail = () => {
   const { dimension } = useParams();
   const config = analitikConfig[dimension];
+  const { user } = useAuth();
 
-  const [filters, setFilters] = useState({});
+  const [filters, setFilters] = useState(() => (user?.role === 'cabang' && user?.kode_cabang ? { kode_cabang: user.kode_cabang } : {}));
   const [data, setData] = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -35,6 +37,9 @@ const AnalitikDetail = () => {
 
   if (!config) return <div>Dimensi tidak dikenali</div>;
 
+  // Helper: format label berdasarkan dimensi (channel pakai formatChannel)
+  const fmtLabel = (label) => dimension === 'channel' ? formatChannel(label) : (label || 'Tidak diketahui');
+
   const totalTransaksi = data.reduce((sum, d) => sum + d.jumlah_transaksi, 0);
   const totalNominal = data.reduce((sum, d) => sum + d.total_nominal, 0);
   const totalFee = data.reduce((sum, d) => sum + d.total_fee, 0);
@@ -43,7 +48,7 @@ const AnalitikDetail = () => {
     tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' } },
     grid: { left: 110, right: 30, top: 10, bottom: 20 },
     xAxis: { type: 'value' },
-    yAxis: { type: 'category', data: data.map((d) => d.label).reverse(), axisLabel: { fontSize: 11 } },
+    yAxis: { type: 'category', data: data.map((d) => fmtLabel(d.label)).reverse(), axisLabel: { fontSize: 11 } },
     series: [{ type: 'bar', data: data.map((d) => d.jumlah_transaksi).reverse(), itemStyle: { color: NAVY }, barMaxWidth: 18 }],
   };
 
@@ -60,7 +65,7 @@ const AnalitikDetail = () => {
         itemStyle: { borderRadius: 4, borderColor: '#fff', borderWidth: 2 },
         label: { show: false },
         data: data.slice(0, 8).map((d, i) => ({
-          name: d.label,
+          name: fmtLabel(d.label),
           value: d.total_nominal,
           itemStyle: { color: ['#12203A', '#C9A46A', '#4A6FA5', '#8A93A6', '#7A5C3E', '#2E4A6B', '#B7791F', '#1F8A5C'][i % 8] },
         })),
@@ -130,7 +135,7 @@ const AnalitikDetail = () => {
               ) : (
                 data.map((d) => (
                   <tr key={d.label}>
-                    <td className="ps-3 fw-semibold">{d.label}</td>
+                    <td className="ps-3 fw-semibold">{fmtLabel(d.label)}</td>
                     <td className="text-end tabular-nums">{formatNumber(d.jumlah_transaksi)}</td>
                     <td className="text-end tabular-nums">{formatRupiah(d.total_nominal)}</td>
                     <td className="text-end tabular-nums">{formatRupiah(d.total_fee)}</td>

@@ -24,6 +24,11 @@ const User = sequelize.define('User', {
     allowNull: false,
     defaultValue: 'auditor',
   },
+  kode_cabang: {
+    type: DataTypes.STRING(3),
+    allowNull: true,
+    defaultValue: null,
+  },
   is_active: {
     type: DataTypes.BOOLEAN,
     defaultValue: true,

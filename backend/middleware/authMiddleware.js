@@ -19,12 +19,31 @@ const requireRole = (...roles) => (req, res, next) => {
   next();
 };
 
+const { User } = require('../models');
+
 // Paksa filter kode_cabang untuk role 'cabang', abaikan value dari frontend
-const applyBranchScope = (req, res, next) => {
-  if (req.user.role === 'cabang' && req.user.kode_cabang) {
-    req.query.kode_cabang = req.user.kode_cabang;
+const applyBranchScope = async (req, res, next) => {
+  try {
+    if (req.user && req.user.role === 'cabang') {
+      let kodeCabang = req.user.kode_cabang;
+
+      // Jika token lama belum menyimpan kode_cabang, ambil langsung dari database
+      if (!kodeCabang) {
+        const dbUser = await User.findByPk(req.user.id, { attributes: ['kode_cabang'] });
+        if (dbUser && dbUser.kode_cabang) {
+          kodeCabang = dbUser.kode_cabang;
+          req.user.kode_cabang = kodeCabang;
+        }
+      }
+
+      // KUNCI STRICT: Paksa filter kode_cabang.
+      // Jika kodeCabang tidak ada/null, beri dumi '___NONE___' agar TIDAK PERNAH menampilkan data keseluruhan bank!
+      req.query.kode_cabang = kodeCabang || '___NONE___';
+    }
+    next();
+  } catch (error) {
+    next(error);
   }
-  next();
 };
 
 module.exports = { verifyToken, requireRole, applyBranchScope };

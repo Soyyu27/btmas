@@ -4,14 +4,16 @@ import api from '../services/api';
 import KpiCard from '../components/KpiCard';
 import ChartCard from '../components/ChartCard';
 import FilterPanel from '../components/FilterPanel';
-import { formatRupiah, formatNumber, namaBulan } from '../utils/formatters';
+import { formatRupiah, formatNumber, namaBulan, formatChannel } from '../utils/formatters';
+import { useAuth } from '../context/AuthContext';
 
 const GOLD = '#C9A46A';
 const NAVY = '#12203A';
 const PALETTE = ['#12203A', '#C9A46A', '#4A6FA5', '#8A93A6', '#7A5C3E', '#2E4A6B'];
 
 const Dashboard = () => {
-  const [filters, setFilters] = useState({});
+  const { user } = useAuth();
+  const [filters, setFilters] = useState(() => (user?.role === 'cabang' && user?.kode_cabang ? { kode_cabang: user.kode_cabang } : {}));
   const [kpi, setKpi] = useState(null);
   const [trendBulanan, setTrendBulanan] = useState([]);
   const [trendHarian, setTrendHarian] = useState([]);
@@ -150,9 +152,9 @@ const Dashboard = () => {
 
   const topChannelOption = {
     tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' } },
-    grid: { left: 80, right: 30, top: 10, bottom: 20 },
+    grid: { left: 120, right: 30, top: 10, bottom: 20 },
     xAxis: { type: 'value' },
-    yAxis: { type: 'category', data: topChannel.map((d) => d.vxchnl).reverse(), axisLabel: { fontSize: 11 } },
+    yAxis: { type: 'category', data: topChannel.map((d) => formatChannel(d.vxchnl)).reverse(), axisLabel: { fontSize: 11 } },
     series: [{ type: 'bar', data: topChannel.map((d) => d.jumlah_transaksi).reverse(), itemStyle: { color: GOLD }, barMaxWidth: 18 }],
   };
 

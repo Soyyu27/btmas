@@ -59,10 +59,15 @@ const RoleManagement = () => {
 
   return (
     <div>
-      <h5 className="fw-bold mb-3">Role Management</h5>
+      <div className="d-flex justify-content-between align-items-center mb-3">
+        <div>
+          <h5 className="fw-bold mb-1" style={{ color: '#1D2433' }}>Role Management</h5>
+          <div style={{ fontSize: '13px', color: '#8A93A6' }}>Matriks dan konfigurasi hak akses peran pengguna</div>
+        </div>
+      </div>
 
       {/* Ringkasan role — pakai KpiCard yang sama dengan Dashboard/Analitik, biar konsisten */}
-      <div className="row row-cols-3 g-3 mb-4">
+      <div className="row row-cols-1 row-cols-md-3 g-3 mb-4">
         {roles.map((r) => (
           <KpiCard
             key={r.code}

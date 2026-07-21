@@ -1,4 +1,4 @@
-import { formatRupiah } from '../utils/formatters';
+import { formatRupiah, formatChannel } from '../utils/formatters';
 
 const Row = ({ label, value }) => (
   <div className="d-flex justify-content-between py-2" style={{ borderBottom: '1px solid #F0F1F4', fontSize: '13px' }}>
@@ -27,7 +27,7 @@ const TransactionDetailModal = ({ data, onClose }) => {
         <div className="px-4 py-2">
           <Row label="Tanggal" value={data.tgl_full} />
           <Row label="Waktu" value={data.vxlctm} />
-          <Row label="Channel" value={data.vxchnl} />
+          <Row label="Channel" value={formatChannel(data.vxchnl)} />
           <Row label="Cabang" value={data.kode_cabang} />
           <Row label="Produk" value={data.produk} />
           <Row label="Kategori" value={data.kategori} />

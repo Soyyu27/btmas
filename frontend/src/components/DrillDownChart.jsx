@@ -5,10 +5,12 @@ import ChartCard from './ChartCard';
 import EmptyState from './EmptyState';
 import { namaBulan } from '../utils/formatters';
 
-const DrillDownChart = ({ title, trendBulanan, metricKey, color, formatter, filters }) => {
+const DrillDownChart = ({ title, trendBulanan, metricKey, getValue, color, formatter, filters }) => {
   const [selectedMonth, setSelectedMonth] = useState(null); // { tahun, bulan }
   const [trendHarian, setTrendHarian] = useState([]);
   const [loadingDaily, setLoadingDaily] = useState(false);
+
+  const extractVal = (d) => (getValue ? getValue(d) : parseFloat(d[metricKey]) || 0);
 
   const handleMonthClick = async (params) => {
     const clicked = trendBulanan[params.dataIndex];
@@ -31,7 +33,9 @@ const DrillDownChart = ({ title, trendBulanan, metricKey, color, formatter, filt
   };
 
   const totalSelectedMonth = selectedMonth
-    ? trendHarian.reduce((sum, d) => sum + (parseFloat(d[metricKey]) || 0), 0)
+    ? (getValue
+        ? (trendHarian.length > 0 ? trendHarian.reduce((sum, d) => sum + extractVal(d), 0) / (metricKey === 'success_rate' || metricKey.startsWith('rata_') ? trendHarian.length : 1) : 0)
+        : trendHarian.reduce((sum, d) => sum + extractVal(d), 0))
     : null;
 
   const option = selectedMonth
@@ -45,7 +49,7 @@ const DrillDownChart = ({ title, trendBulanan, metricKey, color, formatter, filt
         yAxis: { type: 'value' },
         series: [{
           type: 'line', smooth: true,
-          data: trendHarian.map((d) => d[metricKey]),
+          data: trendHarian.map((d) => extractVal(d)),
           itemStyle: { color },
           areaStyle: { color: `${color}22` },
         }],
@@ -60,7 +64,7 @@ const DrillDownChart = ({ title, trendBulanan, metricKey, color, formatter, filt
         yAxis: { type: 'value' },
         series: [{
           type: 'line', smooth: true,
-          data: trendBulanan.map((d) => d[metricKey]),
+          data: trendBulanan.map((d) => extractVal(d)),
           itemStyle: { color },
           areaStyle: { color: `${color}18` },
         }],

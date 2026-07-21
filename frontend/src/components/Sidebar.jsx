@@ -7,12 +7,13 @@ const Sidebar = () => {
 
   return (
     <div
-      className="d-flex flex-column vh-100"
+      className="d-flex flex-column vh-100 flex-shrink-0"
       style={{
         width: '272px',
         backgroundColor: 'var(--navy-950)',
         borderRight: '1px solid var(--navy-border)',
         overflowY: 'auto',
+        flexShrink: 0,
       }}
     >
       {/* Brand */}
@@ -59,10 +60,11 @@ const Sidebar = () => {
                     <NavLink
                       to={item.path}
                       className={({ isActive }) =>
-                        `sidebar-link${isActive ? ' sidebar-link-active' : ''}`
+                        `sidebar-link d-flex align-items-center gap-2${isActive ? ' sidebar-link-active' : ''}`
                       }
                     >
-                      {item.label}
+                      {item.icon && <i className={`bi ${item.icon}`} style={{ fontSize: '14px', opacity: 0.85 }} />}
+                      <span>{item.label}</span>
                     </NavLink>
                   </li>
                 ))}

@@ -9,6 +9,7 @@ const emptyForm = { username: '', password: '', full_name: '', role: 'auditor', 
 
 const UserManagement = () => {
   const [users, setUsers] = useState([]);
+  const [cabangOptions, setCabangOptions] = useState([]);
   const [search, setSearch] = useState('');
   const [loading, setLoading] = useState(true);
   const [modalOpen, setModalOpen] = useState(false);
@@ -28,6 +29,32 @@ const UserManagement = () => {
   }, [search]);
 
   useEffect(() => { fetchUsers(); }, [fetchUsers]);
+
+  useEffect(() => {
+    // Ambil daftar cabang dari Master Data & Filter Data Transaksi
+    Promise.all([
+      api.get('/master/cabang').catch(() => ({ data: [] })),
+      api.get('/dashboard/filters').catch(() => ({ data: {} })),
+    ]).then(([masterRes, filterRes]) => {
+      const masterList = masterRes.data || [];
+      const filterCabangs = filterRes.data?.cabang || [];
+
+      const map = new Map();
+      masterList.forEach((c) => {
+        if (c.kode_cabang) {
+          map.set(String(c.kode_cabang), c.nama_cabang ? `${c.kode_cabang} - ${c.nama_cabang}` : String(c.kode_cabang));
+        }
+      });
+      filterCabangs.forEach((code) => {
+        if (code && !map.has(String(code))) {
+          map.set(String(code), `Cabang ${code}`);
+        }
+      });
+
+      const options = Array.from(map.entries()).map(([code, label]) => ({ code, label }));
+      setCabangOptions(options);
+    });
+  }, []);
 
   const handleAdd = () => {
     setEditItem(null);
@@ -72,10 +99,19 @@ const UserManagement = () => {
     }
   };
 
+  const getBranchLabel = (code) => {
+    if (!code) return '-';
+    const found = cabangOptions.find((c) => c.code === code);
+    return found ? found.label : code;
+  };
+
   return (
     <div>
       <div className="d-flex justify-content-between align-items-center mb-3">
-        <h5 className="fw-bold mb-0">Manajemen User</h5>
+        <div>
+          <h5 className="fw-bold mb-1" style={{ color: '#1D2433' }}>Manajemen User</h5>
+          <div style={{ fontSize: '13px', color: '#8A93A6' }}>Pengelolaan akun pengguna dan penetapan cabang</div>
+        </div>
         <button className="btn btn-sm" style={{ backgroundColor: 'var(--navy-950)', color: '#fff' }} onClick={handleAdd}>
           + Tambah User
         </button>
@@ -117,7 +153,7 @@ const UserManagement = () => {
                     <td className="ps-3 fw-semibold">{u.username}</td>
                     <td>{u.full_name || '-'}</td>
                     <td>{roleLabel[u.role] || u.role}</td>
-                    <td>{u.kode_cabang || '-'}</td>
+                    <td>{getBranchLabel(u.kode_cabang)}</td>
                     <td>
                       <span style={{
                         fontSize: '11px', fontWeight: 600, padding: '2px 8px', borderRadius: '4px',
@@ -175,7 +211,7 @@ const UserManagement = () => {
                 <div className="mb-3">
                   <label className="form-label" style={{ fontSize: '13px', fontWeight: 600 }}>Role</label>
                   <select className="form-select form-select-sm" value={form.role}
-                    onChange={(e) => setForm({ ...form, role: e.target.value })}>
+                    onChange={(e) => setForm({ ...form, role: e.target.value, kode_cabang: e.target.value === 'cabang' ? form.kode_cabang : '' })}>
                     <option value="admin">Administrator</option>
                     <option value="cabang">Cabang</option>
                     <option value="auditor">Auditor</option>
@@ -183,9 +219,20 @@ const UserManagement = () => {
                 </div>
                 {form.role === 'cabang' && (
                   <div className="mb-3">
-                    <label className="form-label" style={{ fontSize: '13px', fontWeight: 600 }}>Kode Cabang</label>
-                    <input type="text" className="form-control form-control-sm" required maxLength={3}
-                      value={form.kode_cabang || ''} onChange={(e) => setForm({ ...form, kode_cabang: e.target.value })} />
+                    <label className="form-label" style={{ fontSize: '13px', fontWeight: 600 }}>Kode / Nama Cabang</label>
+                    <select
+                      className="form-select form-select-sm"
+                      required
+                      value={form.kode_cabang || ''}
+                      onChange={(e) => setForm({ ...form, kode_cabang: e.target.value })}
+                    >
+                      <option value="">-- Pilih Cabang --</option>
+                      {cabangOptions.map((c) => (
+                        <option key={c.code} value={c.code}>
+                          {c.label}
+                        </option>
+                      ))}
+                    </select>
                   </div>
                 )}
                 {editItem && (

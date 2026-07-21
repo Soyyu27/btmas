@@ -1,25 +1,36 @@
 import { useState, useEffect } from 'react';
 import api from '../services/api';
+import { formatChannel } from '../utils/formatters';
+import { useAuth } from '../context/AuthContext';
 
 const FilterPanel = ({ filters, onApply }) => {
+  const { user } = useAuth();
   const [local, setLocal] = useState(filters);
   const [options, setOptions] = useState({ produk: [], kategori: [], channel: [], status: [], cabang: [] });
 
-    useEffect(() => {
-    setLocal(filters);
-    }, [filters]);
+  useEffect(() => {
+    if (user?.role === 'cabang' && user?.kode_cabang) {
+      setLocal((prev) => ({ ...filters, kode_cabang: user.kode_cabang }));
+    } else {
+      setLocal(filters);
+    }
+  }, [filters, user]);
 
   useEffect(() => {
     api.get('/dashboard/filters').then((res) => setOptions(res.data)).catch(() => {});
   }, []);
-  
 
   const handleChange = (field, value) => {
-    setLocal((prev) => ({ ...prev, [field]: value }));
+    const nextFilters = { ...local, [field]: value };
+    if (user?.role === 'cabang' && user?.kode_cabang) {
+      nextFilters.kode_cabang = user.kode_cabang;
+    }
+    setLocal(nextFilters);
+    onApply(nextFilters);
   };
 
   const handleReset = () => {
-    const empty = {};
+    const empty = user?.role === 'cabang' && user?.kode_cabang ? { kode_cabang: user.kode_cabang } : {};
     setLocal(empty);
     onApply(empty);
   };
@@ -34,6 +45,20 @@ const FilterPanel = ({ filters, onApply }) => {
         <label className="form-label mb-1" style={{ fontSize: '12px', color: '#8A93A6' }}>Tanggal Akhir</label>
         <input type="date" className="form-control form-control-sm" value={local.tanggal_akhir || ''} onChange={(e) => handleChange('tanggal_akhir', e.target.value)} />
       </div>
+      {user?.role === 'cabang' ? (
+        <div>
+          <label className="form-label mb-1" style={{ fontSize: '12px', color: '#8A93A6' }}>Cabang</label>
+          <input type="text" className="form-control form-control-sm bg-light" value={`Cabang ${user.kode_cabang}`} disabled readOnly style={{ width: '130px', fontWeight: 600 }} />
+        </div>
+      ) : (
+        <div>
+          <label className="form-label mb-1" style={{ fontSize: '12px', color: '#8A93A6' }}>Cabang</label>
+          <select className="form-select form-select-sm" value={local.kode_cabang || ''} onChange={(e) => handleChange('kode_cabang', e.target.value)}>
+            <option value="">Semua</option>
+            {options.cabang.map((c) => <option key={c} value={c}>{c}</option>)}
+          </select>
+        </div>
+      )}
       <div>
         <label className="form-label mb-1" style={{ fontSize: '12px', color: '#8A93A6' }}>Produk</label>
         <select className="form-select form-select-sm" value={local.produk || ''} onChange={(e) => handleChange('produk', e.target.value)}>
@@ -52,7 +77,7 @@ const FilterPanel = ({ filters, onApply }) => {
         <label className="form-label mb-1" style={{ fontSize: '12px', color: '#8A93A6' }}>Channel</label>
         <select className="form-select form-select-sm" value={local.vxchnl || ''} onChange={(e) => handleChange('vxchnl', e.target.value)}>
           <option value="">Semua</option>
-          {options.channel.map((c) => <option key={c} value={c}>{c}</option>)}
+          {options.channel.map((c) => <option key={c} value={c}>{formatChannel(c)}</option>)}
         </select>
       </div>
       <div>
@@ -62,11 +87,8 @@ const FilterPanel = ({ filters, onApply }) => {
           {options.status.map((s) => <option key={s} value={s}>{s}</option>)}
         </select>
       </div>
-      <button className="btn btn-sm" style={{ backgroundColor: 'var(--navy-950)', color: '#fff' }} onClick={() => onApply(local)}>
-        Terapkan
-      </button>
-      <button className="btn btn-sm btn-outline-secondary" onClick={handleReset}>
-        Reset
+      <button className="btn btn-sm btn-outline-secondary ms-auto" onClick={handleReset}>
+        Reset Filter
       </button>
     </div>
   );

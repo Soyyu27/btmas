@@ -54,14 +54,28 @@ exports.getTrendHarian = async (req, res) => {
         [fn('COUNT', col('id')), 'jumlah_transaksi'],
         [fn('SUM', col('vxamt')), 'total_nominal'],
         [fn('SUM', col('vxamfe')), 'total_fee'],
-
+        [fn('COUNT', literal(`CASE WHEN vxstat = 'P' THEN 1 END`)), 'total_success'],
+        [fn('COUNT', literal(`CASE WHEN vxstat = 'F' THEN 1 END`)), 'total_gagal'],
+        [fn('COUNT', fn('DISTINCT', col('vxdbac'))), 'jumlah_rekening'],
+        [fn('COUNT', literal(`CASE WHEN vxerr IS NOT NULL AND vxerr != '' THEN 1 END`)), 'total_error'],
       ],
       group: ['tgl_full'],
       order: [['tgl_full', 'ASC']],
       raw: true,
     });
 
-    res.json(result);
+    const parsed = result.map((r) => ({
+      tgl_full: r.tgl_full,
+      jumlah_transaksi: parseInt(r.jumlah_transaksi) || 0,
+      total_nominal: parseFloat(r.total_nominal) || 0,
+      total_fee: parseFloat(r.total_fee) || 0,
+      total_success: parseInt(r.total_success) || 0,
+      total_gagal: parseInt(r.total_gagal) || 0,
+      jumlah_rekening: parseInt(r.jumlah_rekening) || 0,
+      total_error: parseInt(r.total_error) || 0,
+    }));
+
+    res.json(parsed);
   } catch (error) {
     res.status(500).json({ message: 'Gagal ambil trend harian', error: error.message });
   }
@@ -185,13 +199,15 @@ exports.getKategoriVsStatus = async (req, res) => {
 // 8. Opsi untuk dropdown filter (produk, kategori, channel, status, cabang, tahun, bulan)
 exports.getFilterOptions = async (req, res) => {
   try {
+    const where = buildWhereClause(req.query);
+
     const [produk, kategori, channel, status, cabang, tahun] = await Promise.all([
-      Transaction.aggregate('produk', 'DISTINCT', { plain: false }),
-      Transaction.aggregate('kategori', 'DISTINCT', { plain: false }),
-      Transaction.aggregate('vxchnl', 'DISTINCT', { plain: false }),
-      Transaction.aggregate('vxstat', 'DISTINCT', { plain: false }),
-      Transaction.aggregate('kode_cabang', 'DISTINCT', { plain: false }),
-      Transaction.aggregate('tahun', 'DISTINCT', { plain: false }),
+      Transaction.aggregate('produk', 'DISTINCT', { where, plain: false }),
+      Transaction.aggregate('kategori', 'DISTINCT', { where, plain: false }),
+      Transaction.aggregate('vxchnl', 'DISTINCT', { where, plain: false }),
+      Transaction.aggregate('vxstat', 'DISTINCT', { where, plain: false }),
+      Transaction.aggregate('kode_cabang', 'DISTINCT', { where, plain: false }),
+      Transaction.aggregate('tahun', 'DISTINCT', { where, plain: false }),
     ]);
 
     const clean = (arr, field) => arr.map((item) => item[field]).filter((v) => v !== null);
@@ -280,13 +296,29 @@ exports.getTrendBulanan = async (req, res) => {
         [fn('COUNT', col('id')), 'jumlah_transaksi'],
         [fn('SUM', col('vxamt')), 'total_nominal'],
         [fn('SUM', col('vxamfe')), 'total_fee'],
+        [fn('COUNT', literal(`CASE WHEN vxstat = 'P' THEN 1 END`)), 'total_success'],
+        [fn('COUNT', literal(`CASE WHEN vxstat = 'F' THEN 1 END`)), 'total_gagal'],
+        [fn('COUNT', fn('DISTINCT', col('vxdbac'))), 'jumlah_rekening'],
+        [fn('COUNT', literal(`CASE WHEN vxerr IS NOT NULL AND vxerr != '' THEN 1 END`)), 'total_error'],
       ],
       group: ['tahun', 'bulan'],
       order: [['tahun', 'ASC'], ['bulan', 'ASC']],
       raw: true,
     });
 
-    res.json(result);
+    const parsed = result.map((r) => ({
+      tahun: r.tahun,
+      bulan: r.bulan,
+      jumlah_transaksi: parseInt(r.jumlah_transaksi) || 0,
+      total_nominal: parseFloat(r.total_nominal) || 0,
+      total_fee: parseFloat(r.total_fee) || 0,
+      total_success: parseInt(r.total_success) || 0,
+      total_gagal: parseInt(r.total_gagal) || 0,
+      jumlah_rekening: parseInt(r.jumlah_rekening) || 0,
+      total_error: parseInt(r.total_error) || 0,
+    }));
+
+    res.json(parsed);
   } catch (error) {
     res.status(500).json({ message: 'Gagal ambil trend bulanan', error: error.message });
   }
